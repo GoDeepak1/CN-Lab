@@ -1,288 +1,3 @@
-<-------------------Program1------------------->
-
-#Create Simulator object
-
-set  ns [new Simulator]
-
-#Open trace file
-set  nt [open lab1.tr w]
-$ns trace-all $nt
-
-#Open namtrace file
-set  nf [open lab1.nam w]
-$ns namtrace-all $nf
-
- #Create nodes 
- set n0 [$ns node] 
- set n1 [$ns node] 
- set n2 [$ns node] 
- set n3 [$ns node]
-
-#Assign color to the packet
-$ns color 1 Blue
-$ns color 2 Red
-
-#label nodes
-$n0 label "Source/udp0"
-$n1 label "Source/udp1"
-$n2 label "Router"
-$n3 label "Destination/null"
-
-#create links, specify the type, nodes, bandwidth, delay and ARQ algorithm for it
-
-$ns duplex-link $n0 $n2 10Mb 300ms DropTail
-$ns duplex-link $n1 $n2 10Mb 300ms DropTail
-$ns duplex-link $n2 $n3 100Kb 300ms DropTail
-
-#set queue size between the nodes
-$ns queue-limit $n0 $n2 10
-$ns queue-limit $n1 $n2 10
-$ns queue-limit $n2 $n3 5
-
- #create and attach UDP agent to n0, n1 and Null agent to n3
- set udp0 [new Agent/UDP]
- $ns attach-agent $n0 $udp0
-set udp1 [new Agent/UDP]
-$ns attach-agent $n1 $udp1
-set null3 [new Agent/Null]
-$ns attach-agent $n3 $null3
-
-#attach Application cbr to udp
-set cbr0 [new Application/Traffic/CBR]
-$cbr0 attach-agent $udp0
-set cbr1 [new Application/Traffic/CBR]
-$cbr1 attach-agent $udp1
-
-#set udp0 packet to red color and udp1 packet to blue color
-$udp0 set class_ 1
-$udp1 set class_ 2
-
-#connect the agents
-$ns connect $udp0 $null3
-$ns connect $udp1 $null3
-
-#set packet size and interval for cbr1
-$cbr1 set packetSize_ 500Mb
-$cbr1 set interval_ 0.005
-
- #finish procedure 
-proc finish { } {
-global ns nf nt
-$ns flush-trace
-exec nam lab1.nam & 
-close $nt
-close 
-$nf 
-exit 0
-}
-$ns at 0.1 "$cbr0 start"
-$ns at 0.1 "$cbr1 start"
-$ns at 10.0 "finish"
-$ns run
-
-
-
-AWK file
-
-BEGIN { count=0;
-}
-{
-    if ($1=="d")
-        count++
-} 
-END{
-             printf("Number of packets dropped is = %d\n", count);
-}
-
-<-------------------Program2-------------------->
-#create Simulator class
-set ns [new Simulator]
-
-#open trace file
-set nt [open lab2.tr w]
-$ns trace-all $nt
-
-#create Topography object
-set topo [new Topography]
-
-#define grid size
-$topo load_flatgrid 1000 1000
-
-#open namtrace file
-set nf [open lab2.nam w]
-$ns namtrace-all-wireless $nf 1000 1000
-
-#specify node configuration
-$ns node-config -adhocRouting DSDV \
--llType LL \
--macType Mac/802_11 \
--ifqType Queue/DropTail \
--ifqLen 20 \
--phyType Phy/WirelessPhy \
--channelType Channel/WirelessChannel \
--propType Propagation/TwoRayGround \
--antType Antenna/OmniAntenna \
--topoInstance $topo \
--agentTrace ON \
--routerTrace ON
-
-#create a General Operation Director(god) object that stores the total number of mobile nodes.
-create-god 4
-
-#create nodes and label them
-set n0 [$ns node]
-set n1 [$ns node] 
-set n2 [$ns node] 
-set n3 [$ns node]
-$n0 label "tcp0"
-$n1 label "sink0"
-$n2 label "bs1"
-$n3 label "bs2"
-#give initial x, y, z coordinates to nodes
-$n0 set X_ 110
-$n0 set Y_ 500
-$n0 set Z_ 0
-$n1 set X_ 600
-$n1 set Y_ 500
-$n1 set Z_ 0
-$n2 set X_ 300
-$n2 set Y_ 500
-$n2 set Z_ 0
-$n3 set X_ 450
-$n3 set Y_ 500
-$n3 set Z_ 0
-#attach agent and application to nodes and connect them
-set tcp0 [new Agent/TCP]
-$ns attach-agent $n0 $tcp0
-set ftp0 [new Application/FTP]
-$ftp0 attach-agent $tcp0
-set sink1 [new Agent/TCPSink]
-$ns attach-agent $n1 $sink1
-$ns connect $tcp0 $sink1
-
-#schedule the event
-$ns at 0.5 "$ftp0 start"
-
-#set up a destination for mobile nodes. They move to <x><y> coordinates at <s>m/s.
-$ns at 0.3 "$n0 setdest 110 500 10"
-$ns at 0.3 "$n1 setdest 600 500 20"
-$ns at 0.3 "$n2 setdest 300 500 30"
-$ns at 0.3 "$n3 setdest 450 500 30"
-$ns at 10.0 "$n0 setdest 100 550 5"
-$ns at 10.0 "$n1 setdest 630 450 5"
-$ns at 70.0 "$n0 setdest 170 680 5"
-$ns at 70.0 "$n1 setdest 580 380 5"
-
-$ns at 120.0 "$n0 setdest 140 720 5"
-$ns at 135.0 "$n0 setdest 110 600 5"
-$ns at 140.0 "$n1 setdest 600 550 5"
-$ns at 155.0 "$n0 setdest 89 500 5"
-$ns at 190.0 "$n0 setdest 100 440 5"
-$ns at 210.0 "$n1 setdest 700 600 5"
-$ns at 240.0 "$n1 setdest 650 500 5" 
-
-
-
-
-proc finish { } {
-global ns nt nf
-$ns flush-trace
-exec nam lab42.nam & 
-close $nt
-close $nf 
-exit 0
-}
-$ns at 400 "finish"
-$ns run
-
-
-
-
-
-
-
-AWK file
-
-BEGIN{
-PktsSent=0; 
-PktsRcvd=0; 
-PktsAtRTR=0;
-}
-{
-if(($1=="s")&&($4=="RTR")&&($7=="tcp")) PktsAtRTR++;
-if(($1=="s")&&($4=="AGT")&&($7=="tcp")) PktsSent++;
-if(($1=="r")&&($4=="AGT")&&($7=="tcp")) PktsRcvd++;
-}
-END{
-print " Number of Packets Sent :" PktsSent
-print " Number of Packets Received :" PktsRcvd
-print " Pacjet Delivery Ratio :" PktsRcvd/PktsSent*100 
-print " Routing Load :" PktsAtRTR/PktsRcvd
-}
-
-
-
-<-----------------Program3---------------->
-
-import java.util.Scanner;
-public class CRC 
-{
-        public static int n;
-public static void main(String[] args)
-{
-      Scanner sc=new Scanner(System.in); 
-     CRC crc=new CRC();
-     String copy,rec,code,zero="0000000000000000";
-     System.out.println("enter the dataword to be sent"); 
-     code=sc.nextLine();
-     System.out.println("The dataword is "+code);
-     n=code.length();
-System.out.println("Length of the dataword="+n); 
-
-     copy=code; 
-      code+=zero; 
-      System.out.println("The modified codeword is"+code);
-
- code=crc.divide(code);
- copy=copy.substring(0,n)+code.substring(n);
-System.out.print("CRC="); 
-System.out.println(code.substring(n));
-System.out.println("transmitted frame is="+copy);
-System.out.println("enter received data:"); 
-rec=sc.nextLine();
-if(zero.equals(crc.divide(rec).substring(n))) 
-System.out.println("correct bits received"); 
-else
-System.out.println("received frame contains one or more error");
-sc.close();
-}
-
-
-public String divide(String s)
-{
-String div="10001000000100001";
-int i,j;
-char x;
-for(i=0;i<n;i++)
-{
-   x=s.charAt(i);
-for(j=0;j<17;j++)
-{
-if(x=='1')
-{
-if(s.charAt(i+j)!=div.charAt(j)) 
-s=s.substring(0,i+j)+"1"+s.substring(i+j+1);
-else
-      s=s.substring(0,i+j)+"0"+s.substring(i+j+1);
-}
-}
-}
-
-return s;
-}
-}
-
-
 <--------------------------------Program4-------------------------------->
 
 #create Simulator object
@@ -396,3 +111,292 @@ END{
       printf ("Number of packets dropped is = %d\n",count);
 
 }
+
+
+
+
+
+
+
+
+<------------------Program 5---------------------------->
+
+import java.util.Scanner; 
+public class bellmanford 
+{ 
+public int distance[]; 
+public int numb_vert; 
+public static final int MAX_VALUE=999; 
+public bellmanford(int numb_vert) 
+{ 
+this.numb_vert = numb_vert; 
+distance = new int[numb_vert+1]; 
+} 
+public void BellmanfordpEvaluation(int source,int adj_matrix[][]) 
+{ 
+for(int node=1;node<=numb_vert;node++) 
+distance[node]=MAX_VALUE; 
+distance[source]=0; 
+for(int node=1;node<=numb_vert-1;node++) 
+{ 
+for(int src_node=1;src_node<=numb_vert;src_node++) 
+{ 
+for(int dest_node=1;dest_node<=numb_vert;dest_node++) 
+{ 
+if(adj_matrix[src_node][dest_node]!=MAX_VALUE) 
+{ 
+if(distance[dest_node] > distance[src_node] + 
+adj_matrix[src_node][dest_node]) 
+} 
+} 
+} 
+} 
+distance[dest_node] = distance[src_node] + 
+adj_matrix[src_node][dest_node]; 
+for(int src_node=1;src_node<=numb_vert;src_node++) 
+{ 
+for(int dest_node=1;dest_node<=numb_vert;dest_node++) 
+{ 
+if(adj_matrix[src_node][dest_node]!=MAX_VALUE) 
+{ 
+if(distance[dest_node] > distance[src_node] + 
+adj_matrix[src_node][dest_node]) 
+{ 
+System.out.println("The graph contains negative edge cycle"); 
+}
+
+} 
+} 
+} 
+System.out.println("Routing Table for Router " + source+" is"); 
+System.out.println("Destination 
+Distance\t"); 
+for(int vertex=1;vertex<=numb_vert;vertex++) 
+System.out.println(+vertex+"\t\t\t"+distance[vertex]); 
+} 
+public static void main(String args[]) 
+{ 
+int numb_vert=0; 
+int source
+ ; 
+Scanner scan = new Scanner(System.in); 
+System.out.println("Enter the number of vertices"); 
+numb_vert = scan.nextInt(); 
+int adj_matrix[][] = new int[numb_vert+1][numb_vert+1]; 
+System.out.println("Enter the adjacency matrix"); 
+for(int src_node=1;src_node<=numb_vert;src_node++) 
+for(int dest_node=1;dest_node<=numb_vert;dest_node++) 
+{ 
+adj_matrix[src_node][dest_node] = scan.nextInt(); 
+if(src_node==dest_node) 
+{ 
+adj_matrix[src_node][dest_node]=0; 
+continue; 
+} 
+if(adj_matrix[src_node][dest_node]==0) 
+adj_matrix[src_node][dest_node]=MAX_VALUE; 
+} 
+for(int i=1;i<=numb_vert;i++) 
+{ 
+bellmanford bellmanford = new bellmanford(numb_vert); 
+bellmanford.BellmanfordpEvaluation(i,adj_matrix); 
+} 
+scan.close(); 
+} 
+} 
+
+<--------- Progrzm 6------------->
+
+#set ns Simulator
+set ns [new Simulator]
+
+#define color for data flow
+$ns color 1 Blue
+$ns color 2 Red
+
+#open trace file
+set tracefile1 [open lab6.tr w] 
+set winfile [open winfile w]
+$ns trace-all $tracefile1
+
+#open namtrace file
+set namfile [open lab6.nam w]
+$ns namtrace-all $namfile
+
+#define finish procedure
+
+
+proc finish { } {
+global ns tracefile1 namfile
+$ns flush-trace 
+close $tracefile1 
+close $namfile
+exec nam lab6.nam & 
+exit 0
+}
+
+#create 6 nodes
+set n0 [$ns node] 
+set n1 [$ns node]
+set n2 [$ns node] 
+set n3 [$ns node] 
+set n4 [$ns node] 
+set n5 [$ns node]
+$n1 shape box
+
+#create link between nodes
+$ns duplex-link $n0 $n2 2Mb 10ms DropTail
+$ns duplex-link $n1 $n2 2Mb 10ms DropTail
+$ns simplex-link $n2 $n3 0.3Mb 100ms DropTail
+$ns simplex-link $n3 $n2 0.3Mb 100ms DropTail
+set lan [$ns newLan "$n3 $n4 $n5" 0.5Mb 40ms LL Queue/DropTail MAC/802_3]
+
+#give node position
+$ns duplex-link-op $n0 $n2 orient right-down
+$ns duplex-link-op $n1 $n2 orient right-up
+$ns simplex-link-op $n3 $n2 orient left
+$ns simplex-link-op $n2 $n3 orient right
+
+#set queue size of link(n2-n3)
+$ns queue-limit $n2 $n3 20
+
+#setup tcp connection
+set tcp [new Agent/TCP]
+$ns attach-agent $n0 $tcp
+set sink [new Agent/TCPSink]
+$ns attach-agent $n4 $sink
+$ns connect $tcp $sink
+$tcp set fid_ 1
+$tcp set packetSize_ 552
+
+#set ftp over tcp connection
+set ftp [new Application/FTP]
+$ftp attach-agent $tcp
+
+#setup a TCP1 connection
+set tcp1 [new Agent/TCP]
+$ns attach-agent $n1 $tcp1
+
+set sink1 [new Agent/TCPSink]
+$ns attach-agent $n5 $sink1
+
+$ns connect $tcp1 $sink1
+
+$tcp1 set fid_ 2
+$tcp1 set packetSize_ 552
+
+set telnet0 [new Application/Telnet]
+$telnet0 attach-agent $tcp1
+
+#title congestion window1
+set outfile1 [open congestion1.xg w]
+puts $outfile1 "TitleText: Congestion Window-- Source _tcp"
+puts $outfile1 "xUnitText: Simulation Time(Secs)"
+
+puts $outfile1 "yUnitText: Congestion WindowSize"
+
+#title congestion window2
+set outfile2 [open congestion2.xg w]
+puts $outfile2 "TitleText: Congestion Window-- Source _tcp1" 
+puts $outfile2 "xUnitText: Simulation Time(Secs)"
+puts $outfile2 "yUnitText: Congestion WindowSize"
+
+proc plotWindow {tcpSource outfile} { 
+global ns
+set time 0.1
+set now [$ns now]
+set cwnd [$tcpSource set cwnd_] 
+puts $outfile "$now $cwnd"
+$ns at [expr $now+$time] "plotWindow $tcpSource $outfile"
+}
+
+$ns at 0.1 "plotWindow $tcp $winfile"
+$ns at 0.0 "plotWindow $tcp $outfile1"
+$ns at 0.1 "plotWindow $tcp1 $outfile2"
+
+$ns at 0.3 "$ftp start"
+$ns at 0.5 "$telnet0 start"
+$ns at 49.0 "$ftp stop"
+$ns at 49.1 "$telnet0 stop"
+$ns at 50.0 "finish"
+$ns run
+
+
+
+
+<--------------------------------Program 7-------------------------------->
+
+
+
+
+
+
+
+
+
+import java.util.Scanner; 
+ 
+public class bucket { 
+ 
+ public static void main(String[] args) 
+ { 
+ 
+  Scanner sc=new Scanner(System.in); 
+ 
+  int bucket=0; 
+  int op_rate,i,n,bsize; 
+ 
+  System.out.println("Enter the number of packets"); 
+  n=sc.nextInt(); 
+   
+  System.out.println("Enter the output rate of the bucket"); 
+  op_rate=sc.nextInt(); 
+ 
+  System.out.println("Enter the bucket size"); 
+  bsize=sc.nextInt(); 
+ 
+  System.out.println("Enter the arriving packets(size)"); 
+  int pkt[]=new int[n]; 
+  for(i=0;i<n;i++) 
+  { 
+   pkt[i]=sc.nextInt(); 
+  } 
+ 
+  System.out.println("\nSec\tpsize\tBucket\tAccept/Reject\tpkt_send"); 
+  System.out.println("----------------------------------------------------"); 
+  for(i=0;i<n;i++) 
+  { 
+   System.out.print(i+1+"\t"+pkt[i]+"\t"); 
+   if(bucket+pkt[i]<=bsize) 
+   { 
+    bucket+=pkt[i]; 
+    System.out.print(bucket+"\tAccept\t\t"+min(bucket,op_rate)+"\n" +""); 
+    bucket=sub(bucket,op_rate); 
+   } 
+   else 
+   { 
+    int reject=(bucket+pkt[i]-bsize); 
+                                 bucket=bsize; 
+    System.out.print(bucket+"\tReject "+reject+"\t"+min(bucket,op_rate)+"\n"); 
+     
+    bucket=sub(bucket,op_rate); 
+
+} 
+  } 
+  while(bucket!=0) 
+  { 
+   System.out.print((++i)+"\t0\t"+bucket+"\tAccept\t\t"+min(bucket,op_rate)+"\t"); 
+   bucket=sub(bucket,op_rate); 
+  } 
+ } 
+  
+ static int min(int a,int b) 
+ { 
+  return ((a<b)?a:b); 
+ } 
+  
+ static int sub(int a,int b) 
+ { 
+  return (a-b)>0?(a-b):0; 
+ } 
+} 
